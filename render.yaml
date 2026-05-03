@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: mediclaim-fraud-shield
+    runtime: python
+    buildCommand: pip install -r requirements.txt && python -c "from generate_data import generate_dataset; from ml_pipeline import train_and_save; df = generate_dataset(); train_and_save(df)"
+    startCommand: gunicorn app:app
