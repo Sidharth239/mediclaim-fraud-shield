@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MediClaim Fraud Shield</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap');
+:root{--bg:#0A0E17;--surf:#111827;--card:#1A2235;--border:#1F2D45;--text:#E2EBF8;--muted:#7A8BA8;--fraud:#FF3D57;--legit:#2D9CFF;--accent:#F5A623;--green:#27C97A;--purple:#9B6DFF;--mono:'Space Mono',monospace;--sans:'DM Sans',sans-serif}
+*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(45,156,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(45,156,255,.04) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+
+/* NAV */
+nav{position:sticky;top:0;z-index:100;background:rgba(10,14,23,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 40px;display:flex;align-items:center;gap:0;height:58px}
+.nav-brand{display:flex;align-items:center;gap:10px;margin-right:32px;text-decoration:none}
+.nav-logo{width:32px;height:32px;background:linear-gradient(135deg,var(--fraud),#FF6B35);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.nav-title{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--text)}
+.nav-tab{padding:0 18px;height:58px;display:flex;align-items:center;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;background:none;border-top:none;border-left:none;border-right:none;font-family:var(--sans)}
+.nav-tab:hover{color:var(--text)}
+.nav-tab.active{color:var(--legit);border-bottom-color:var(--legit)}
+.nav-actions{margin-left:auto;display:flex;gap:10px;align-items:center}
+.btn{padding:8px 18px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:none;transition:all .2s;font-family:var(--sans)}
+.btn-primary{background:var(--legit);color:#fff}.btn-primary:hover{background:#1a7fd4}
+.btn-danger{background:rgba(255,61,87,.15);color:var(--fraud);border:1px solid rgba(255,61,87,.3)}.btn-danger:hover{background:rgba(255,61,87,.25)}
+.btn-outline{background:transparent;color:var(--muted);border:1px solid var(--border)}.btn-outline:hover{border-color:var(--legit);color:var(--legit)}
+.btn-sm{padding:6px 14px;font-size:11px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* PAGES */
+.page{display:none;max-width:1400px;margin:0 auto;padding:32px 40px 80px;position:relative;z-index:1}
+.page.active{display:block}
+
+/* KPI GRID */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:32px}
+.kpi-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;transition:transform .2s,border-color .2s;animation:fadeUp .5s ease backwards}
+.kpi-card:hover{transform:translateY(-2px);border-color:rgba(45,156,255,.25)}
+.kpi-card::before{content:'';display:block;height:3px;border-radius:3px;margin-bottom:14px}
+.kpi-card.c-fraud::before{background:var(--fraud)}.kpi-card.c-legit::before{background:var(--legit)}
+.kpi-card.c-accent::before{background:var(--accent)}.kpi-card.c-green::before{background:var(--green)}
+.kpi-card.c-purple::before{background:var(--purple)}
+.kpi-label{font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px}
+.kpi-val{font-family:var(--mono);font-size:26px;font-weight:700;line-height:1;margin-bottom:4px}
+.kpi-card.c-fraud .kpi-val{color:var(--fraud)}.kpi-card.c-legit .kpi-val{color:var(--legit)}
+.kpi-card.c-accent .kpi-val{color:var(--accent)}.kpi-card.c-green .kpi-val{color:var(--green)}
+.kpi-card.c-purple .kpi-val{color:var(--purple)}
+.kpi-sub{font-size:11px;color:var(--muted)}
+
+/* SECTION */
+.sec-hdr{display:flex;align-items:center;gap:10px;margin:32px 0 16px}
+.sec-tag{font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;background:rgba(45,156,255,.1);border:1px solid rgba(45,156,255,.2);color:var(--legit);padding:3px 10px;border-radius:4px}
+.sec-title{font-size:18px;font-weight:600}
+.sec-line{flex:1;height:1px;background:var(--border)}
+
+/* CARDS */
+.panel{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:20px;animation:fadeUp .6s ease .2s backwards}
+.panel-title{font-family:var(--mono);font-size:12px;font-weight:700;margin-bottom:4px;letter-spacing:.5px}
+.panel-sub{font-size:12px;color:var(--muted);margin-bottom:18px;line-height:1.5}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px}
+
+/* CHARTS via canvas */
+.chart-wrap{position:relative;height:240px;width:100%}
+.chart-wrap.tall{height:300px}
+.chart-wrap.short{height:180px}
+
+/* TABLE */
+.tbl-wrap{overflow-x:auto;border-radius:12px;border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse}
+thead th{font-family:var(--mono);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);padding:11px 14px;text-align:left;background:rgba(255,255,255,.02);border-bottom:1px solid var(--border);white-space:nowrap}
+tbody tr{border-bottom:1px solid rgba(255,255,255,.04);transition:background .15s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:rgba(45,156,255,.04)}
+tbody td{padding:11px 14px;font-size:12px;font-family:var(--mono);white-space:nowrap}
+.tbl-controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.tbl-controls input,.tbl-controls select{background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--text);font-family:var(--sans);outline:none;transition:border-color .2s}
+.tbl-controls input:focus,.tbl-controls select:focus{border-color:var(--legit)}
+.tbl-controls input{width:200px}
+.pagination{display:flex;gap:8px;align-items:center;margin-top:14px;justify-content:flex-end}
+.page-btn{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:6px 12px;font-size:12px;font-family:var(--mono);color:var(--muted);cursor:pointer;transition:all .2s}
+.page-btn:hover,.page-btn.active{border-color:var(--legit);color:var(--legit)}
+.page-btn:disabled{opacity:.4;cursor:not-allowed}
+.page-info{font-size:12px;color:var(--muted);font-family:var(--mono)}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;white-space:nowrap}
+.badge-fraud{background:rgba(255,61,87,.15);color:var(--fraud);border:1px solid rgba(255,61,87,.3)}
+.badge-legit{background:rgba(45,156,255,.1);color:var(--legit);border:1px solid rgba(45,156,255,.2)}
+.badge-high{background:rgba(255,61,87,.15);color:var(--fraud);border:1px solid rgba(255,61,87,.3)}
+.badge-medium{background:rgba(245,166,35,.1);color:var(--accent);border:1px solid rgba(245,166,35,.25)}
+.badge-low{background:rgba(39,201,122,.1);color:var(--green);border:1px solid rgba(39,201,122,.25)}
+
+/* FORM */
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+.form-group{display:flex;flex-direction:column;gap:6px}
+.form-label{font-size:11px;font-family:var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+.form-control{background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--text);font-family:var(--sans);outline:none;transition:border-color .2s}
+.form-control:focus{border-color:var(--legit)}
+.form-check{display:flex;align-items:center;gap:8px;cursor:pointer}
+.form-check input[type=checkbox]{width:16px;height:16px;accent-color:var(--legit)}
+
+/* PREDICTION RESULT */
+.result-box{border-radius:16px;padding:28px;margin-top:20px;border:1px solid;animation:fadeUp .4s ease}
+.result-box.high{background:rgba(255,61,87,.08);border-color:rgba(255,61,87,.3)}
+.result-box.medium{background:rgba(245,166,35,.08);border-color:rgba(245,166,35,.3)}
+.result-box.low{background:rgba(39,201,122,.08);border-color:rgba(39,201,122,.3)}
+.result-prob{font-family:var(--mono);font-size:52px;font-weight:700;line-height:1;margin-bottom:4px}
+.result-box.high .result-prob{color:var(--fraud)}
+.result-box.medium .result-prob{color:var(--accent)}
+.result-box.low .result-prob{color:var(--green)}
+.result-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-top:16px}
+.result-item{background:rgba(255,255,255,.04);border-radius:10px;padding:12px}
+.result-item-label{font-size:10px;font-family:var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+.result-item-val{font-family:var(--mono);font-size:16px;font-weight:700}
+.flags-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.flag-tag{background:rgba(255,61,87,.1);border:1px solid rgba(255,61,87,.2);color:var(--fraud);padding:4px 12px;border-radius:20px;font-size:11px}
+
+/* UPLOAD */
+.dropzone{border:2px dashed var(--border);border-radius:16px;padding:48px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s}
+.dropzone:hover,.dropzone.dragover{border-color:var(--legit);background:rgba(45,156,255,.04)}
+.dropzone-icon{font-size:40px;margin-bottom:12px}
+.dropzone-text{font-size:15px;font-weight:500;margin-bottom:6px}
+.dropzone-sub{font-size:12px;color:var(--muted)}
+#file-input{display:none}
+
+/* PROGRESS */
+.progress-bar{height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden;margin-top:8px}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--legit),var(--purple));border-radius:2px;transition:width .3s}
+
+/* METRIC BAR */
+.metric-row{display:flex;align-items:center;margin-bottom:10px;gap:10px}
+.metric-name{font-family:var(--mono);font-size:11px;color:var(--muted);width:120px;flex-shrink:0}
+.metric-bar-wrap{flex:1;height:6px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden}
+.metric-bar-fill{height:100%;border-radius:3px;transition:width 1s ease}
+.metric-val{font-family:var(--mono);font-size:12px;font-weight:700;min-width:50px;text-align:right}
+
+/* MODEL CARDS */
+.model-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-bottom:20px}
+.model-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;transition:all .2s}
+.model-card:hover{transform:translateY(-2px);border-color:rgba(45,156,255,.25)}
+.model-card.best{border-color:rgba(245,166,35,.4);background:linear-gradient(135deg,#1A2235,#1c2519)}
+.model-name{font-family:var(--mono);font-size:13px;font-weight:700;margin-bottom:3px}
+.model-type{font-size:11px;color:var(--muted);margin-bottom:16px}
+.best-badge{background:rgba(245,166,35,.15);border:1px solid rgba(245,166,35,.4);color:var(--accent);font-family:var(--mono);font-size:8px;letter-spacing:1.5px;padding:2px 7px;border-radius:4px;margin-left:8px;vertical-align:middle}
+
+/* SPINNER */
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+/* TOAST */
+#toast{position:fixed;bottom:28px;right:28px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 20px;font-size:13px;z-index:999;opacity:0;transform:translateY(10px);transition:all .3s;pointer-events:none}
+#toast.show{opacity:1;transform:translateY(0)}
+
+/* STATUS BAR */
+.status-bar{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;color:var(--green);background:rgba(39,201,122,.08);border:1px solid rgba(39,201,122,.2);border-radius:8px;padding:8px 14px;margin-bottom:24px;width:fit-content}
+.status-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:blink 2s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+@media(max-width:900px){.grid-2,.grid-3{grid-template-columns:1fr}.page{padding:20px 16px 60px}nav{padding:0 16px}}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a class="nav-brand" href="#">
+    <div class="nav-logo">🛡️</div>
+    <span class="nav-title">MediClaim Fraud Shield</span>
+  </a>
+  <button class="nav-tab active" onclick="showPage('dashboard',this)">Dashboard</button>
+  <button class="nav-tab" onclick="showPage('predict',this)">Predict Claim</button>
+  <button class="nav-tab" onclick="showPage('upload',this)">Batch Upload</button>
+  <button class="nav-tab" onclick="showPage('claims',this)">Claims Table</button>
+  <button class="nav-tab" onclick="showPage('models',this)">Models</button>
+  <div class="nav-actions">
+    <button class="btn btn-outline btn-sm" onclick="retrainModels()">🔄 Retrain</button>
+  </div>
+</nav>
+
+<!-- ══════════════════ PAGE: DASHBOARD ══════════════════ -->
+<div id="page-dashboard" class="page active">
+  <div style="margin-bottom:24px">
+    <h2 style="font-family:var(--mono);font-size:22px;margin-bottom:6px">Analytics Dashboard</h2>
+    <p style="color:var(--muted);font-size:14px">Real-time health insurance fraud detection — 15,000 claims analyzed</p>
+  </div>
+  <div class="status-bar"><span class="status-dot"></span> PIPELINE ACTIVE — MODELS LOADED</div>
+
+  <!-- KPIs -->
+  <div class="kpi-grid" id="kpi-grid">
+    <div class="kpi-card c-fraud" style="animation-delay:.05s"><div class="kpi-label">Fraud Claims</div><div class="kpi-val" id="kpi-fraud">—</div><div class="kpi-sub" id="kpi-fraud-pct">Loading...</div></div>
+    <div class="kpi-card c-legit" style="animation-delay:.10s"><div class="kpi-label">Total Claims</div><div class="kpi-val" id="kpi-total">—</div><div class="kpi-sub" id="kpi-daterange">Loading...</div></div>
+    <div class="kpi-card c-accent" style="animation-delay:.15s"><div class="kpi-label">Avg Fraud Amount</div><div class="kpi-val" id="kpi-fraud-amt">—</div><div class="kpi-sub" id="kpi-legit-amt">Loading...</div></div>
+    <div class="kpi-card c-green" style="animation-delay:.20s"><div class="kpi-label">Best AUC-ROC</div><div class="kpi-val" id="kpi-auc">—</div><div class="kpi-sub">Gradient Boosting</div></div>
+    <div class="kpi-card c-purple" style="animation-delay:.25s"><div class="kpi-label">Outlier Fraud Rate</div><div class="kpi-val" id="kpi-outlier">—</div><div class="kpi-sub">Z-score &gt; 3 threshold</div></div>
+    <div class="kpi-card c-fraud" style="animation-delay:.30s"><div class="kpi-label">Expected Loss (MC)</div><div class="kpi-val" id="kpi-loss">—</div><div class="kpi-sub">Monte Carlo median</div></div>
+  </div>
+
+  <div class="grid-2">
+    <div class="panel">
+      <div class="panel-title">Monthly Fraud Rate Trend</div>
+      <div class="panel-sub">Fraud rate % over time — 2-year window</div>
+      <div class="chart-wrap"><canvas id="chart-monthly"></canvas></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Fraud Rate by Specialty</div>
+      <div class="panel-sub">Which specialties have highest fraud concentration</div>
+      <div class="chart-wrap"><canvas id="chart-specialty"></canvas></div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="panel">
+      <div class="panel-title">Monte Carlo Fraud Rate Distribution</div>
+      <div class="panel-sub">10,000 simulations — 95% confidence interval</div>
+      <div class="chart-wrap"><canvas id="chart-mc-rates"></canvas></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Monte Carlo Financial Loss Distribution</div>
+      <div class="panel-sub">Expected annual fraud loss simulation</div>
+      <div class="chart-wrap"><canvas id="chart-mc-loss"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ PAGE: PREDICT ══════════════════ -->
+<div id="page-predict" class="page">
+  <div style="margin-bottom:24px">
+    <h2 style="font-family:var(--mono);font-size:22px;margin-bottom:6px">Single Claim Prediction</h2>
+    <p style="color:var(--muted);font-size:14px">Enter claim details below to get an instant fraud probability score</p>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Claim Details</div>
+    <div class="panel-sub">All fields required for accurate prediction</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Claim Amount ($)</label>
+        <input class="form-control" id="f-amount" type="number" value="5000" min="0">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Claim Date</label>
+        <input class="form-control" id="f-date" type="date" value="2023-06-15">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Patient Age</label>
+        <input class="form-control" id="f-age" type="number" value="52" min="18" max="90">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Patient Gender</label>
+        <select class="form-control" id="f-gender">
+          <option value="M">Male</option>
+          <option value="F">Female</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Specialty</label>
+        <select class="form-control" id="f-specialty">
+          <option>Cardiology</option><option>Orthopedics</option><option>Oncology</option>
+          <option>Neurology</option><option selected>General Practice</option><option>Dermatology</option>
+          <option>Psychiatry</option><option>Radiology</option><option>Emergency Medicine</option><option>Surgery</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">State</label>
+        <select class="form-control" id="f-state">
+          <option>CA</option><option>TX</option><option>FL</option><option>NY</option>
+          <option>PA</option><option>OH</option><option>IL</option><option>GA</option>
+          <option>NC</option><option>MI</option><option>NJ</option><option>VA</option>
+          <option>WA</option><option>AZ</option><option>MA</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Provider ID</label>
+        <input class="form-control" id="f-provider" type="text" value="PROV-1042">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Days Admitted</label>
+        <input class="form-control" id="f-days" type="number" value="0" min="0">
+      </div>
+      <div class="form-group">
+        <label class="form-label"># Procedures Same Day</label>
+        <input class="form-control" id="f-procs" type="number" value="1" min="1">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Prior Claims (90 days)</label>
+        <input class="form-control" id="f-prior" type="number" value="0" min="0">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Days to Submission</label>
+        <input class="form-control" id="f-daysub" type="number" value="15" min="1">
+      </div>
+    </div>
+
+    <div style="display:flex;gap:24px;flex-wrap:wrap;margin-top:20px">
+      <label class="form-check"><input type="checkbox" id="f-mismatch"><span>Diagnosis-Procedure Mismatch</span></label>
+      <label class="form-check"><input type="checkbox" id="f-dup"><span>Duplicate Claim</span></label>
+      <label class="form-check"><input type="checkbox" id="f-selfref"><span>Self-Referral</span></label>
+    </div>
+
+    <div style="margin-top:24px;display:flex;gap:12px;flex-wrap:wrap">
+      <button class="btn btn-primary" id="btn-predict" onclick="submitPrediction()">🔍 Analyze Claim</button>
+      <button class="btn btn-outline" onclick="loadHighRiskExample()">⚡ Load High-Risk Example</button>
+      <button class="btn btn-outline" onclick="loadLegitExample()">✅ Load Legitimate Example</button>
+    </div>
+  </div>
+
+  <div id="prediction-result" style="display:none"></div>
+</div>
+
+<!-- ══════════════════ PAGE: UPLOAD ══════════════════ -->
+<div id="page-upload" class="page">
+  <div style="margin-bottom:24px">
+    <h2 style="font-family:var(--mono);font-size:22px;margin-bottom:6px">Batch CSV Upload</h2>
+    <p style="color:var(--muted);font-size:14px">Upload a CSV of claims to get fraud predictions for the entire file</p>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Upload Claims CSV</div>
+    <div class="panel-sub">Required columns: claim_amount, days_admitted, num_procedures_same_day, prior_claims_90d, diagnosis_mismatch, days_to_submission, is_duplicate, self_referral, patient_age</div>
+    <div class="dropzone" id="dropzone" onclick="document.getElementById('file-input').click()" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+      <div class="dropzone-icon">📂</div>
+      <div class="dropzone-text">Drop your CSV here or click to browse</div>
+      <div class="dropzone-sub">CSV files only — up to 16MB</div>
+    </div>
+    <input type="file" id="file-input" accept=".csv" onchange="handleFileSelect(event)">
+    <div id="upload-progress" style="display:none;margin-top:16px">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:4px" id="upload-status">Uploading...</div>
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+    </div>
+    <div style="margin-top:16px">
+      <button class="btn btn-outline btn-sm" onclick="downloadSampleCSV()">⬇️ Download Sample CSV</button>
+    </div>
+  </div>
+
+  <div id="upload-result" style="display:none"></div>
+</div>
+
+<!-- ══════════════════ PAGE: CLAIMS TABLE ══════════════════ -->
+<div id="page-claims" class="page">
+  <div style="margin-bottom:24px">
+    <h2 style="font-family:var(--mono);font-size:22px;margin-bottom:6px">Claims Explorer</h2>
+    <p style="color:var(--muted);font-size:14px">Browse, search and filter all 15,000 claims</p>
+  </div>
+  <div class="panel" style="padding:20px">
+    <div class="tbl-controls">
+      <input type="text" id="tbl-search" placeholder="Search claim ID, provider, specialty..." oninput="debounceLoadClaims()">
+      <select id="tbl-fraud" onchange="loadClaims()">
+        <option value="">All Claims</option>
+        <option value="1">Fraud Only</option>
+        <option value="0">Legitimate Only</option>
+      </select>
+      <select id="tbl-specialty" onchange="loadClaims()">
+        <option value="">All Specialties</option>
+        <option>Cardiology</option><option>Orthopedics</option><option>Oncology</option>
+        <option>Neurology</option><option>General Practice</option><option>Dermatology</option>
+        <option>Psychiatry</option><option>Radiology</option><option>Emergency Medicine</option><option>Surgery</option>
+      </select>
+      <input type="number" id="tbl-min" placeholder="Min $" style="width:90px" oninput="debounceLoadClaims()">
+      <input type="number" id="tbl-max" placeholder="Max $" style="width:90px" oninput="debounceLoadClaims()">
+      <span class="page-info" id="tbl-count">Loading...</span>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th>Claim ID</th><th>Provider</th><th>Specialty</th><th>Procedure</th>
+          <th>Amount</th><th>Prior Claims</th><th>Flags</th><th>Status</th>
+        </tr></thead>
+        <tbody id="claims-tbody"><tr><td colspan="8" style="text-align:center;padding:32px;color:var(--muted)">Loading claims...</td></tr></tbody>
+      </table>
+    </div>
+    <div class="pagination" id="pagination"></div>
+  </div>
+</div>
+
+<!-- ══════════════════ PAGE: MODELS ══════════════════ -->
+<div id="page-models" class="page">
+  <div style="margin-bottom:24px">
+    <h2 style="font-family:var(--mono);font-size:22px;margin-bottom:6px">Model Performance</h2>
+    <p style="color:var(--muted);font-size:14px">ROC curves, confusion matrices, feature importances — all live from the trained models</p>
+  </div>
+
+  <div class="model-cards" id="model-cards">
+    <div class="panel" style="grid-column:1/-1;text-align:center;color:var(--muted)">Loading model metrics...</div>
+  </div>
+
+  <div class="grid-2">
+    <div class="panel">
+      <div class="panel-title">ROC Curves — All Models</div>
+      <div class="panel-sub">True positive rate vs false positive rate</div>
+      <div class="chart-wrap tall"><canvas id="chart-roc"></canvas></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Feature Importance (Random Forest)</div>
+      <div class="panel-sub">Top 15 most predictive features</div>
+      <div class="chart-wrap tall"><canvas id="chart-fi"></canvas></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Confusion Matrix — Gradient Boosting (Best Model)</div>
+    <div class="panel-sub">Predicted vs actual on 20% test set (3,000 claims)</div>
+    <div id="confusion-matrix" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:400px;margin:0 auto"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+// ══════ UTILS ══════
+const $ = id => document.getElementById(id);
+let currentPage = 1;
+let debounceTimer;
+
+function showPage(name, tab) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  $(`page-${name}`).classList.add('active');
+  if(tab) tab.classList.add('active');
+  if(name==='dashboard') loadDashboard();
+  if(name==='claims') loadClaims();
+  if(name==='models') loadModels();
+}
+
+function toast(msg, color='var(--green)') {
+  const t = $('toast');
+  t.textContent = msg;
+  t.style.borderColor = color;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 3000);
+}
+
+function fmt$(n){return '$'+Number(n).toLocaleString('en-US',{maximumFractionDigits:0})}
+function fmtPct(n){return n+'%'}
+
+// ══════ CHARTS (vanilla canvas — no library needed) ══════
+function drawLineChart(canvasId, labels, datasets, opts={}) {
+  const canvas = $(canvasId);
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio||1;
+  canvas.width = canvas.offsetWidth * dpr;
+  canvas.height = canvas.offsetHeight * dpr;
+  ctx.scale(dpr, dpr);
+  const W = canvas.offsetWidth, H = canvas.offsetHeight;
+  const pad = {top:20,right:20,bottom:50,left:55};
+  const chartW = W-pad.left-pad.right, chartH = H-pad.top-pad.bottom;
+
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#1A2235';
+  ctx.fillRect(0,0,W,H);
+
+  const allVals = datasets.flatMap(d=>d.data);
+  const minV = opts.minY !== undefined ? opts.minY : Math.min(...allVals)*0.9;
+  const maxV = opts.maxY !== undefined ? opts.maxY : Math.max(...allVals)*1.1;
+
+  // Grid
+  ctx.strokeStyle='rgba(255,255,255,.06)';ctx.lineWidth=1;
+  for(let i=0;i<=4;i++){
+    const y = pad.top + chartH*(1-i/4);
+    ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(pad.left+chartW,y);ctx.stroke();
+    ctx.fillStyle='#7A8BA8';ctx.font='10px monospace';ctx.textAlign='right';
+    const val = minV+(maxV-minV)*(i/4);
+    ctx.fillText(opts.yFmt?opts.yFmt(val):val.toFixed(1), pad.left-6, y+4);
+  }
+
+  // X labels
+  ctx.fillStyle='#7A8BA8';ctx.font='10px monospace';ctx.textAlign='center';
+  const step = Math.max(1, Math.floor(labels.length/8));
+  labels.forEach((l,i)=>{
+    if(i%step!==0) return;
+    const x = pad.left + (i/(labels.length-1))*chartW;
+    ctx.fillText(String(l).substring(0,7), x, H-pad.bottom+16);
+  });
+
+  // Lines
+  datasets.forEach(ds=>{
+    ctx.beginPath();
+    ctx.strokeStyle=ds.color||'#2D9CFF';ctx.lineWidth=2;
+    ds.data.forEach((v,i)=>{
+      const x=pad.left+(i/(ds.data.length-1||1))*chartW;
+      const y=pad.top+chartH*(1-(v-minV)/(maxV-minV||1));
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+
+    // Fill
+    if(ds.fill){
+      ctx.beginPath();
+      ds.data.forEach((v,i)=>{
+        const x=pad.left+(i/(ds.data.length-1||1))*chartW;
+        const y=pad.top+chartH*(1-(v-minV)/(maxV-minV||1));
+        i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+      });
+      ctx.lineTo(pad.left+chartW, pad.top+chartH);
+      ctx.lineTo(pad.left, pad.top+chartH);
+      ctx.closePath();
+      ctx.fillStyle=ds.fill;ctx.fill();
+    }
+  });
+
+  // Legend
+  if(datasets.length>1){
+    let lx=pad.left;
+    datasets.forEach(ds=>{
+      ctx.fillStyle=ds.color;ctx.fillRect(lx,8,12,4);
+      ctx.fillStyle='#7A8BA8';ctx.font='10px monospace';ctx.textAlign='left';
+      ctx.fillText(ds.label||'',lx+16,14);
+      lx+=ctx.measureText(ds.label||'').width+36;
+    });
+  }
+}
+
+function drawBarChart(canvasId, labels, values, colors, opts={}) {
+  const canvas = $(canvasId);
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio||1;
+  canvas.width = canvas.offsetWidth*dpr;
+  canvas.height = canvas.offsetHeight*dpr;
+  ctx.scale(dpr,dpr);
+  const W=canvas.offsetWidth,H=canvas.offsetHeight;
+  const pad={top:20,right:20,bottom:opts.hbar?20:60,left:opts.hbar?140:50};
+  const chartW=W-pad.left-pad.right,chartH=H-pad.top-pad.bottom;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#1A2235';ctx.fillRect(0,0,W,H);
+
+  const maxV=Math.max(...values)*1.1||1;
+
+  if(opts.hbar){
+    const barH=Math.min(22, chartH/values.length-4);
+    values.forEach((v,i)=>{
+      const y=pad.top+i*(chartH/values.length)+2;
+      const bw=(v/maxV)*chartW;
+      ctx.fillStyle=typeof colors==='string'?colors:colors[i]||'#2D9CFF';
+      ctx.beginPath();
+      ctx.roundRect(pad.left,y,bw,barH,3);
+      ctx.fill();
+      ctx.fillStyle='#7A8BA8';ctx.font='10px monospace';ctx.textAlign='right';
+      ctx.fillText(labels[i]?String(labels[i]).substring(0,18):'',pad.left-6,y+barH/2+4);
+      ctx.fillStyle='#E2EBF8';ctx.textAlign='left';
+      ctx.fillText(opts.valFmt?opts.valFmt(v):v.toFixed(3),pad.left+bw+4,y+barH/2+4);
+    });
+  } else {
+    const bw=chartW/values.length*0.7,gap=chartW/values.length;
+    // Grid
+    for(let i=0;i<=4;i++){
+      const y=pad.top+chartH*(1-i/4);
+      ctx.strokeStyle='rgba(255,255,255,.06)';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(pad.left+chartW,y);ctx.stroke();
+      ctx.fillStyle='#7A8BA8';ctx.font='10px monospace';ctx.textAlign='right';
+      const val=maxV*i/4;
+      ctx.fillText(opts.yFmt?opts.yFmt(val):val.toFixed(1),pad.left-6,y+4);
+    }
+    values.forEach((v,i)=>{
+      const x=pad.left+i*gap+(gap-bw)/2;
+      const bh=(v/maxV)*chartH;
+      const y=pad.top+chartH-bh;
+      ctx.fillStyle=typeof colors==='string'?colors:colors[i]||'#2D9CFF';
+      ctx.beginPath();ctx.roundRect(x,y,bw,bh,3);ctx.fill();
+      ctx.fillStyle='#7A8BA8';ctx.font='9px monospace';ctx.textAlign='center';
+      const lbl=String(labels[i]||'');
+      ctx.fillText(lbl.length>8?lbl.substring(0,8)+'…':lbl,x+bw/2,H-pad.bottom+14);
+    });
+  }
+}
+
+function drawHistogram(canvasId, data, color, opts={}) {
+  const canvas=$(canvasId); if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  const dpr=window.devicePixelRatio||1;
+  canvas.width=canvas.offsetWidth*dpr; canvas.height=canvas.offsetHeight*dpr;
+  ctx.scale(dpr,dpr);
+  const W=canvas.offsetWidth,H=canvas.offsetHeight;
+  const pad={top:20,right:20,bottom:40,left:55};
+  const chartW=W-pad.left-pad.right,chartH=H-pad.top-pad.bottom;
+  ctx.clearRect(0,0,W,H); ctx.fillStyle='#1A2235'; ctx.fillRect(0,0,W,H);
+  const bins=50;
+  const minV=Math.min(...data),maxV=Math.max(...data);
+  const binW=(maxV-minV)/bins;
+  const counts=new Array(bins).fill(0);
+  data.forEach(v=>{const i=Math.min(Math.floor((v-minV)/binW),bins-1);counts[i]++;});
+  const maxC=Math.max(...counts);
+  const bw=chartW/bins;
+  counts.forEach((c,i)=>{
+    const x=pad.left+i*bw;
+    const bh=(c/maxC)*chartH;
+    const y=pad.top+chartH-bh;
+    ctx.fillStyle=color;
+    ctx.beginPath();ctx.roundRect(x+1,y,bw-2,bh,1);ctx.fill();
+  });
+  // Axes
+  for(let i=0;i<=3;i++){
+    const x=pad.left+(i/3)*chartW;
+    ctx.fillStyle='#7A8BA8';ctx.font='9px monospace';ctx.textAlign='center';
+    const val=minV+(maxV-minV)*(i/3);
+    ctx.fillText(opts.xFmt?opts.xFmt(val):val.toFixed(2),x,H-pad.bottom+14);
+  }
+  // Median line
+  if(opts.median!==undefined){
+    const mx=pad.left+((opts.median-minV)/(maxV-minV))*chartW;
+    ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.setLineDash([4,4]);
+    ctx.beginPath();ctx.moveTo(mx,pad.top);ctx.lineTo(mx,pad.top+chartH);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='#fff';ctx.font='10px monospace';ctx.textAlign='center';
+    ctx.fillText('median',mx,pad.top-4);
+  }
+  if(opts.p95!==undefined){
+    const px=pad.left+((opts.p95-minV)/(maxV-minV))*chartW;
+    ctx.strokeStyle='#FF3D57';ctx.lineWidth=2;ctx.setLineDash([4,4]);
+    ctx.beginPath();ctx.moveTo(px,pad.top);ctx.lineTo(px,pad.top+chartH);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='#FF3D57';ctx.font='10px monospace';ctx.textAlign='center';
+    ctx.fillText('p95',px,pad.top+12);
+  }
+}
+
+// ══════ DASHBOARD ══════
+async function loadDashboard() {
+  try {
+    const [summary, mc, monthly, spec, metrics] = await Promise.all([
+      fetch('/api/summary').then(r=>r.json()),
+      fetch('/api/monte_carlo').then(r=>r.json()),
+      fetch('/api/monthly_trend').then(r=>r.json()),
+      fetch('/api/specialty_fraud').then(r=>r.json()),
+      fetch('/api/metrics').then(r=>r.json()),
+    ]);
+
+    $('kpi-fraud').textContent = summary.fraud_count?.toLocaleString();
+    $('kpi-fraud-pct').textContent = summary.fraud_rate + '% of total dataset';
+    $('kpi-total').textContent = summary.total_claims?.toLocaleString();
+    $('kpi-daterange').textContent = 'Jan 2022 – Jan 2024';
+    $('kpi-fraud-amt').textContent = fmt$(summary.avg_fraud_amount);
+    $('kpi-legit-amt').textContent = `vs ${fmt$(summary.avg_legit_amount)} legit (+184%)`;
+    $('kpi-auc').textContent = metrics['Gradient Boosting']?.auc;
+    $('kpi-outlier').textContent = summary.outlier_fraud_rate + '%';
+    $('kpi-loss').textContent = `$${mc.loss_median}M`;
+
+    setTimeout(() => {
+      // Monthly trend
+      const mLabels = monthly.map(m=>m.month.substring(0,7));
+      const mVals = monthly.map(m=>m.fraud_rate);
+      drawLineChart('chart-monthly', mLabels, [{data:mVals,color:'#FF3D57',fill:'rgba(255,61,87,.12)',label:'Fraud Rate %'}],
+        {yFmt:v=>v.toFixed(1)+'%'});
+
+      // Specialty bar
+      const sLabels = spec.map(s=>s.specialty);
+      const sVals = spec.map(s=>s.fraud_rate);
+      const sColors = sVals.map(v=>v>10?'#FF3D57':'#2D9CFF');
+      drawBarChart('chart-specialty', sLabels, sVals, sColors, {yFmt:v=>v.toFixed(1)+'%'});
+
+      // MC histograms
+      drawHistogram('chart-mc-rates', mc.rates, 'rgba(255,61,87,.7)',
+        {xFmt:v=>v.toFixed(1)+'%', median:mc.rate_ci[0]+(mc.rate_ci[1]-mc.rate_ci[0])/2});
+      drawHistogram('chart-mc-loss', mc.losses, 'rgba(245,166,35,.7)',
+        {xFmt:v=>'$'+v.toFixed(1)+'M', median:mc.loss_median, p95:mc.loss_p95});
+    }, 100);
+  } catch(e){ toast('Failed to load dashboard data','var(--fraud)'); }
+}
+
+// ══════ MODELS PAGE ══════
+async function loadModels() {
+  try {
+    const [metrics, roc, fi, cm] = await Promise.all([
+      fetch('/api/metrics').then(r=>r.json()),
+      fetch('/api/roc').then(r=>r.json()),
+      fetch('/api/feature_importance').then(r=>r.json()),
+      fetch('/api/confusion_matrix').then(r=>r.json()),
+    ]);
+
+    // Model cards
+    const mnames = ['Logistic Regression','Random Forest','Gradient Boosting','Isolation Forest'];
+    const mcolors = {'Logistic Regression':'#F5A623','Random Forest':'#9B6DFF','Gradient Boosting':'#27C97A','Isolation Forest':'#2D9CFF'};
+    const mtypes = {
+      'Logistic Regression':'Supervised · Balanced Class Weights',
+      'Random Forest':'Supervised · 200 Trees · 5-Fold CV',
+      'Gradient Boosting':'Supervised · 150 Estimators · lr=0.1',
+      'Isolation Forest':'Unsupervised · Anomaly Detection',
+    };
+    const isBest = 'Gradient Boosting';
+    const container = $('model-cards');
+    container.innerHTML = mnames.map(n=>{
+      const m=metrics[n]; if(!m) return '';
+      const c=mcolors[n];
+      return `<div class="model-card${n===isBest?' best':''}">
+        <div class="model-name">${n}${n===isBest?'<span class="best-badge">★ BEST</span>':''}</div>
+        <div class="model-type">${mtypes[n]||''}</div>
+        <div class="metric-row"><span class="metric-name">AUC-ROC</span>
+          <div class="metric-bar-wrap"><div class="metric-bar-fill" style="width:${m.auc*100}%;background:${c}"></div></div>
+          <span class="metric-val" style="color:${c}">${m.auc}</span></div>
+        <div class="metric-row"><span class="metric-name">F1 Score</span>
+          <div class="metric-bar-wrap"><div class="metric-bar-fill" style="width:${m.f1*100}%;background:${c}"></div></div>
+          <span class="metric-val" style="color:${c}">${m.f1}</span></div>
+        <div class="metric-row"><span class="metric-name">Avg Prec</span>
+          <div class="metric-bar-wrap"><div class="metric-bar-fill" style="width:${m.ap*100}%;background:${c}"></div></div>
+          <span class="metric-val" style="color:${c}">${m.ap}</span></div>
+      </div>`;
+    }).join('');
+
+    setTimeout(() => {
+      // ROC chart
+      const rocColors = {'Logistic Regression':'#F5A623','Random Forest':'#9B6DFF','Gradient Boosting':'#27C97A','Isolation Forest':'#2D9CFF'};
+      const rocDatasets = Object.keys(roc).map(name=>({
+        data:roc[name].tpr, color:rocColors[name],
+        label:`${name} (${metrics[name]?.auc})`
+      }));
+      drawLineChart('chart-roc', roc['Gradient Boosting'].fpr.map(v=>v.toFixed(2)),
+        rocDatasets, {minY:0,maxY:1,yFmt:v=>v.toFixed(1)});
+
+      // Feature importance
+      const fiLabels = Object.keys(fi);
+      const fiVals = Object.values(fi);
+      const fiColors = fiLabels.map(l=>['risk_score','is_duplicate','diagnosis_mismatch','self_referral'].some(k=>l.includes(k))?'#FF3D57':'#2D9CFF');
+      drawBarChart('chart-fi', fiLabels, fiVals, fiColors, {hbar:true, valFmt:v=>v.toFixed(3)});
+
+      // Confusion matrix
+      const gbCM = cm['Gradient Boosting'];
+      if(gbCM){
+        const labels=[['TN','FP'],['FN','TP']];
+        const colors=[['rgba(45,156,255,.3)','rgba(255,61,87,.3)'],['rgba(255,61,87,.3)','rgba(39,201,122,.3)']];
+        $('confusion-matrix').innerHTML = gbCM.flatMap((row,i)=>row.map((val,j)=>`
+          <div style="background:${colors[i][j]};border-radius:12px;padding:24px;text-align:center">
+            <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-bottom:4px">${labels[i][j]}</div>
+            <div style="font-family:var(--mono);font-size:32px;font-weight:700">${val.toLocaleString()}</div>
+            <div style="font-size:11px;color:var(--muted)">${['Correct Legit','False Alarm','Missed Fraud','Caught Fraud'][i*2+j]}</div>
+          </div>`)).join('');
+      }
+    },100);
+  } catch(e){ toast('Failed to load model data','var(--fraud)'); }
+}
+
+// ══════ PREDICT ══════
+async function submitPrediction() {
+  const btn = $('btn-predict');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Analyzing...';
+
+  const payload = {
+    claim_amount: parseFloat($('f-amount').value)||0,
+    claim_date: $('f-date').value,
+    patient_age: parseInt($('f-age').value)||45,
+    patient_gender: $('f-gender').value,
+    specialty: $('f-specialty').value,
+    state: $('f-state').value,
+    provider_id: $('f-provider').value,
+    days_admitted: parseInt($('f-days').value)||0,
+    num_procedures_same_day: parseInt($('f-procs').value)||1,
+    prior_claims_90d: parseInt($('f-prior').value)||0,
+    days_to_submission: parseInt($('f-daysub').value)||15,
+    diagnosis_mismatch: $('f-mismatch').checked?1:0,
+    is_duplicate: $('f-dup').checked?1:0,
+    self_referral: $('f-selfref').checked?1:0,
+  };
+
+  try {
+    const res = await fetch('/api/predict', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+    const data = await res.json();
+    if(data.error) throw new Error(data.error);
+
+    const pct = Math.round(data.fraud_probability*100);
+    const cls = data.risk_level.toLowerCase();
+    const clr = cls==='high'?'var(--fraud)':cls==='medium'?'var(--accent)':'var(--green)';
+    const icons = {high:'🚨',medium:'⚡',low:'✅'};
+
+    $('prediction-result').style.display='block';
+    $('prediction-result').innerHTML = `
+      <div class="result-box ${cls}">
+        <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-bottom:16px">
+          <div>
+            <div style="font-size:12px;color:var(--muted);font-family:var(--mono);margin-bottom:4px">FRAUD PROBABILITY</div>
+            <div class="result-prob">${pct}%</div>
+          </div>
+          <div>
+            <div style="font-size:13px;margin-bottom:6px">${icons[cls]} <strong>${data.risk_level} RISK</strong></div>
+            <div style="font-size:13px;color:var(--muted)">${data.recommendation}</div>
+          </div>
+        </div>
+        <div class="result-grid">
+          <div class="result-item">
+            <div class="result-item-label">GB Probability</div>
+            <div class="result-item-val" style="color:${clr}">${Math.round(data.gb_probability*100)}%</div>
+          </div>
+          <div class="result-item">
+            <div class="result-item-label">RF Probability</div>
+            <div class="result-item-val" style="color:${clr}">${Math.round(data.rf_probability*100)}%</div>
+          </div>
+          <div class="result-item">
+            <div class="result-item-label">Risk Score</div>
+            <div class="result-item-val" style="color:${clr}">${data.risk_score}/20</div>
+          </div>
+          <div class="result-item">
+            <div class="result-item-label">Ensemble Score</div>
+            <div class="result-item-val" style="color:${clr}">${data.fraud_probability}</div>
+          </div>
+        </div>
+        ${data.flags.length>0?`
+        <div style="margin-top:16px">
+          <div style="font-size:11px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Fraud Indicators</div>
+          <div class="flags-list">${data.flags.map(f=>`<span class="flag-tag">⚠ ${f}</span>`).join('')}</div>
+        </div>`:''}
+      </div>`;
+    toast(`Analysis complete — ${data.risk_level} risk (${pct}%)`, clr);
+  } catch(e) {
+    toast('Prediction failed: '+e.message,'var(--fraud)');
+  }
+  btn.disabled=false; btn.textContent='🔍 Analyze Claim';
+}
+
+function loadHighRiskExample() {
+  $('f-amount').value=62000; $('f-date').value='2023-08-14'; $('f-age').value=61;
+  $('f-gender').value='M'; $('f-specialty').value='Surgery'; $('f-state').value='TX';
+  $('f-provider').value='PROV-1042'; $('f-days').value=22; $('f-procs').value=5;
+  $('f-prior').value=7; $('f-daysub').value=180;
+  $('f-mismatch').checked=true; $('f-dup').checked=true; $('f-selfref').checked=true;
+  toast('High-risk example loaded');
+}
+function loadLegitExample() {
+  $('f-amount').value=320; $('f-date').value='2023-03-10'; $('f-age').value=34;
+  $('f-gender').value='F'; $('f-specialty').value='General Practice'; $('f-state').value='CA';
+  $('f-provider').value='PROV-3810'; $('f-days').value=0; $('f-procs').value=1;
+  $('f-prior').value=0; $('f-daysub').value=8;
+  $('f-mismatch').checked=false; $('f-dup').checked=false; $('f-selfref').checked=false;
+  toast('Legitimate example loaded');
+}
+
+// ══════ UPLOAD ══════
+function handleDragOver(e){e.preventDefault();$('dropzone').classList.add('dragover')}
+function handleDragLeave(){$('dropzone').classList.remove('dragover')}
+function handleDrop(e){e.preventDefault();$('dropzone').classList.remove('dragover');processFile(e.dataTransfer.files[0])}
+function handleFileSelect(e){processFile(e.target.files[0])}
+
+async function processFile(file) {
+  if(!file||!file.name.endsWith('.csv')){toast('Please upload a CSV file','var(--fraud)');return;}
+  $('upload-progress').style.display='block';
+  $('upload-status').textContent=`Uploading ${file.name}...`;
+  $('progress-fill').style.width='30%';
+
+  const fd=new FormData(); fd.append('file',file);
+  try{
+    $('progress-fill').style.width='60%';
+    const res=await fetch('/api/upload',{method:'POST',body:fd});
+    $('progress-fill').style.width='100%';
+    const data=await res.json();
+    if(data.error) throw new Error(data.error);
+    $('upload-status').textContent='Complete!';
+
+    $('upload-result').style.display='block';
+    $('upload-result').innerHTML=`
+      <div class="panel" style="margin-top:0">
+        <div class="panel-title">Batch Analysis Results — ${file.name}</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:16px 0">
+          <div class="kpi-card c-legit"><div class="kpi-label">Total Analyzed</div><div class="kpi-val">${data.total.toLocaleString()}</div></div>
+          <div class="kpi-card c-fraud"><div class="kpi-label">High Risk</div><div class="kpi-val">${data.high_risk.toLocaleString()}</div><div class="kpi-sub">≥70% probability</div></div>
+          <div class="kpi-card c-accent"><div class="kpi-label">Medium Risk</div><div class="kpi-val">${data.medium_risk.toLocaleString()}</div><div class="kpi-sub">40–70% probability</div></div>
+          <div class="kpi-card c-green"><div class="kpi-label">Low Risk</div><div class="kpi-val">${data.low_risk.toLocaleString()}</div><div class="kpi-sub">&lt;40% probability</div></div>
+          <div class="kpi-card c-purple"><div class="kpi-label">Avg Fraud Prob</div><div class="kpi-val">${Math.round(data.avg_fraud_probability*100)}%</div></div>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Claim ID</th><th>Amount</th><th>Fraud Probability</th><th>Risk Score</th><th>Risk Level</th></tr></thead>
+            <tbody>${data.results.slice(0,50).map(r=>`
+              <tr>
+                <td>${r.claim_id}</td>
+                <td>${fmt$(r.claim_amount)}</td>
+                <td><div style="display:flex;align-items:center;gap:8px">
+                  <div style="flex:1;height:4px;background:rgba(255,255,255,.1);border-radius:2px">
+                    <div style="width:${r.fraud_probability*100}%;height:100%;background:${r.risk_level==='HIGH'?'#FF3D57':r.risk_level==='MEDIUM'?'#F5A623':'#27C97A'};border-radius:2px"></div>
+                  </div>
+                  <span style="font-size:11px">${Math.round(r.fraud_probability*100)}%</span>
+                </div></td>
+                <td>${r.risk_score}/20</td>
+                <td><span class="badge badge-${r.risk_level.toLowerCase()}">${r.risk_level}</span></td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+        ${data.total>50?`<div style="text-align:center;padding:12px;color:var(--muted);font-size:12px">Showing first 50 of ${data.total} results</div>`:''}
+      </div>`;
+    toast(`Analyzed ${data.total} claims — ${data.high_risk} high-risk flagged`);
+  } catch(e) {
+    $('upload-status').textContent='Failed: '+e.message;
+    toast('Upload failed: '+e.message,'var(--fraud)');
+  }
+}
+
+function downloadSampleCSV() {
+  const headers = 'claim_id,claim_amount,claim_date,patient_age,patient_gender,specialty,state,provider_id,days_admitted,num_procedures_same_day,prior_claims_90d,diagnosis_mismatch,days_to_submission,is_duplicate,self_referral';
+  const rows = [
+    'CLM-S001,62000,2023-08-14,61,M,Surgery,TX,PROV-1042,22,5,7,1,180,1,1',
+    'CLM-S002,320,2023-03-10,34,F,General Practice,CA,PROV-3810,0,1,0,0,8,0,0',
+    'CLM-S003,18900,2023-11-01,55,M,Cardiology,NY,PROV-1087,3,3,4,1,95,0,1',
+    'CLM-S004,850,2022-07-22,29,F,Dermatology,FL,PROV-2441,0,1,1,0,12,0,0',
+    'CLM-S005,44200,2023-05-30,70,M,Oncology,TX,PROV-1118,8,4,6,1,120,1,0',
+  ];
+  const blob=new Blob([headers+'\n'+rows.join('\n')],{type:'text/csv'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='sample_claims.csv'; a.click();
+  URL.revokeObjectURL(url);
+  toast('Sample CSV downloaded');
+}
+
+// ══════ CLAIMS TABLE ══════
+function debounceLoadClaims(){clearTimeout(debounceTimer);debounceTimer=setTimeout(()=>{currentPage=1;loadClaims()},400)}
+
+async function loadClaims(page) {
+  if(page) currentPage=page;
+  const search=$('tbl-search').value;
+  const fraud=$('tbl-fraud').value;
+  const spec=$('tbl-specialty').value;
+  const min=$('tbl-min').value;
+  const max=$('tbl-max').value;
+  const params=new URLSearchParams({page:currentPage,per_page:20,search,fraud,specialty:spec,min_amount:min,max_amount:max});
+  try{
+    const data=await fetch('/api/claims?'+params).then(r=>r.json());
+    if(data.error) throw new Error(data.error);
+    $('tbl-count').textContent=`${data.total.toLocaleString()} claims`;
+    const tbody=$('claims-tbody');
+    if(!data.claims.length){
+      tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--muted)">No claims match your filters</td></tr>';
+    } else {
+      tbody.innerHTML=data.claims.map(c=>{
+        const flags=[];
+        if(c.is_duplicate) flags.push('Dup');
+        if(c.diagnosis_mismatch) flags.push('Mismatch');
+        if(c.self_referral) flags.push('Self-ref');
+        if(c.prior_claims_90d>3) flags.push(`${c.prior_claims_90d} prior`);
+        return `<tr>
+          <td>${c.claim_id}</td>
+          <td>${c.provider_id}</td>
+          <td>${c.specialty}</td>
+          <td>${c.procedure}</td>
+          <td style="color:${c.claim_amount>10000?'var(--fraud)':c.claim_amount>3000?'var(--accent)':'var(--text)'}">${fmt$(c.claim_amount)}</td>
+          <td>${c.prior_claims_90d}</td>
+          <td>${flags.map(f=>`<span class="badge badge-${c.is_fraud?'fraud':'medium'}" style="margin-right:3px">${f}</span>`).join('')||'<span style="color:var(--muted)">—</span>'}</td>
+          <td><span class="badge ${c.is_fraud?'badge-fraud':'badge-legit'}">${c.is_fraud?'⚠ Fraud':'✓ Legit'}</span></td>
+        </tr>`;
+      }).join('');
+    }
+    // Pagination
+    const pg=$('pagination');
+    const pages=Math.min(data.total_pages,10);
+    pg.innerHTML=`
+      <button class="page-btn" onclick="loadClaims(${currentPage-1})" ${currentPage<=1?'disabled':''}>←</button>
+      ${Array.from({length:pages},(_,i)=>i+1).map(p=>`<button class="page-btn${p===currentPage?' active':''}" onclick="loadClaims(${p})">${p}</button>`).join('')}
+      ${data.total_pages>10?`<span class="page-info">... ${data.total_pages} total pages</span>`:''}
+      <button class="page-btn" onclick="loadClaims(${currentPage+1})" ${currentPage>=data.total_pages?'disabled':''}>→</button>
+      <span class="page-info">Page ${currentPage}/${data.total_pages}</span>`;
+  } catch(e) {
+    $('claims-tbody').innerHTML=`<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--fraud)">Error: ${e.message}</td></tr>`;
+  }
+}
+
+// ══════ RETRAIN ══════
+async function retrainModels() {
+  const btn=document.querySelector('.nav-actions .btn-outline');
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span>Retraining...';
+  toast('Retraining models — this takes ~60s...');
+  try{
+    const data=await fetch('/api/retrain',{method:'POST'}).then(r=>r.json());
+    if(data.error) throw new Error(data.error);
+    toast(`✅ Retrain complete — AUC: ${data.best_auc}`);
+    loadDashboard();
+  } catch(e) {
+    toast('Retrain failed: '+e.message,'var(--fraud)');
+  }
+  btn.disabled=false; btn.textContent='🔄 Retrain';
+}
+
+// ══════ INIT ══════
+document.addEventListener('DOMContentLoaded', () => {
+  loadDashboard();
+  window.addEventListener('resize', () => {
+    if($('page-dashboard').classList.contains('active')) loadDashboard();
+    if($('page-models').classList.contains('active')) loadModels();
+  });
+});
+</script>
+</body>
+</html>
