@@ -22,7 +22,7 @@ resource "random_id" "bucket_suffix" {
 }
 
 resource "aws_s3_bucket" "iac_demo" {
-bucket = "advanced-iac-jenkins-${random_id.bucket_suffix.hex}"
+ bucket = "advanced-iac-jenkins-${random_id.bucket_suffix.hex}"
 }
 
 resource "aws_s3_bucket_public_access_block" "iac_demo" {
