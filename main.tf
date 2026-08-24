@@ -43,3 +43,23 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "iac_demo" {
     }
   }
 }
+resource "aws_security_group" "insecure_ssh_test" {
+  name        = "insecure-ssh-test"
+  description = "Temporary intentionally insecure security group for tfsec lab test"
+  vpc_id      = "vpc-00000000"
+
+  ingress {
+    description = "INTENTIONALLY INSECURE LAB TEST"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
